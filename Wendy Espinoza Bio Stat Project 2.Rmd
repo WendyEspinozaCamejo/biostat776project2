@@ -1,0 +1,26 @@
+---
+title: "Biostat776project2"
+author: "Wendy Espinoza Camejo"
+date: "2023-09-25"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(tidytuesdayR)
+```
+
+### Part 1: Fun with functions
+1A. Exponential transformation 
+Write a function that computes the exponential of a number using the truncated series expansion. The function should take two arguments:
+x: the number to be exponentiated
+k: the number of terms to be used in the series expansion beyond the constant 1. The value of k is always.
+```{r}
+Exp <- function(x, k){
+  k <- 1:k
+  sum(x^k/(factorial(k)))
+}
+Exp(2,5)
+```
+
+1B. Sample mean and sample standard deviation
