@@ -70,25 +70,7 @@ I don't get this part of the project; it is giving me an error.
 
 ### Part 2: Wrangling data
 ```{r}
-tuesdata <- tidytuesdayR::tt_load("2020-01-07")
-rainfall <- tuesdata$rainfall
-temperature <- tuesdata$temperature
-library(here)
-if (!file.exists(here("data", "tuesdata_rainfall.RDS"))) {
-    tuesdata <- tidytuesdayR::tt_load("2020-01-07")
-    rainfall <- tuesdata$rainfall
-    temperature <- tuesdata$temperature
 
-    # save the files to RDS objects
-    saveRDS(tuesdata$rainfall, file = here("data", "tuesdata_rainfall.RDS"))
-    saveRDS(tuesdata$temperature, file = here("data", "tuesdata_temperature.RDS"))
-}
-rainfall <- readRDS(here("data", "tuesdata_rainfall.RDS"))
-temperature <- readRDS(here("data", "tuesdata_temperature.RDS"))
-library(tidyverse)
-
-glimpse(rainfall)
-glimpse(temperature)
 ```
 Using the rainfall and temperature data, perform the following steps and create a new data frame called df:
 
