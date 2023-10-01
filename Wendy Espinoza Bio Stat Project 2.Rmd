@@ -37,15 +37,14 @@ sample_sd <- function(x) {
 }
 sample_mean(2:100)
 sample_sd(2:100)
-
 ```
-#####I need to double check this answer: OJO
+
 
 1C. Confidence intervals 
 ```{r}
 calculate_CI <- function(x, conf) {
     N <-length(x)
-    alpha <- 1 - 0.95
+    alpha <- 1 - conf
   degrees_freedom <- N - 1
   #t_score <- qt(p = alpha / 2, df = degrees_freedom, lower.tail = FALSE)
   lower_bound <- sample_mean(x)- 1.95*sample_sd(x)
@@ -57,53 +56,122 @@ calculate_CI <- function(x, conf) {
 
  calculate_CI(1:100, conf = 0.95)
 ```
-######Talk with the professor to see if you need to add the t_score in this solution. cause I get the same values with and without this the t_score script.
-I don't get this part of the project; it is giving me an error.
-```{r}
-#calculate_CI(1:100, conf = 0.95)
-#dat <- data.frame(x = x)
-#fit <- lm(x ~ 1, dat)
-
-# Calculate a 95% confidence interval
-#confint(fit, level = 0.95)
-```
 
 ### Part 2: Wrangling data
 ```{r}
+library("here")
+library("tidyverse")
+library("dplyr")
 
+if(!dir.exists(here("data"))){
+  dir.create(here("data"))
+}
+if (!file.exists(here("data", "tuesdata_rainfall.RDS"))) {
+    rainfall_csv <- 'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-07/rainfall.csv'
+    temperature_csv <- 'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-07/temperature.csv'
+    rainfall <- readr:: read_csv(rainfall_csv)
+    temperature <- readr::read_csv(temperature_csv)
+  # save the files to RDS objects
+    saveRDS(rainfall, file = here("data", "tuesdata_rainfall.RDS"))
+    saveRDS(temperature, file = here("data", "tuesdata_temperature.RDS"))
+}
 ```
-Using the rainfall and temperature data, perform the following steps and create a new data frame called df:
 
+```{r}
+rainfall <- readRDS(here("data", "tuesdata_rainfall.RDS"))
+temperature <- readRDS(here("data", "tuesdata_temperature.RDS"))
+```
+
+```{r}
+library(tidyverse)
+glimpse(rainfall)
+glimpse(temperature)
+```
+
+Using the rainfall and temperature data, perform the following steps and create a new data frame called df:
 1. Start with rainfall dataset and drop any rows with NAs.
 2. Create a new column titled date that combines the columns year, month, day into one column separated by “-”. (e.g. “2020-01-01”). This column should not be a character, but should be recognized as a date. (Hint: check out the ymd() function in lubridate R package). You will also want to add a column that just keeps the year.
 3. Using the city_name column, convert the city names (character strings) to all upper case.
 4. Join this wrangled rainfall dataset with the temperature dataset such that it includes only observations that are in both data frames. (Hint: there are two keys that you will need to join the two datasets together). (Hint: If all has gone well thus far, you should have a dataset with 83,964 rows and 13 columns).
 ```{r}
-
+library("lubridate")
+rainfall_na <- drop_na(rainfall)
+## I can also use na.omit() 
+glimpse(rainfall_na)
+rainfall_na_year <- cbind(rainfall_na, year_dup = rainfall_na$year)
+rainfall_na_year_date <- rainfall_na_year %>%
+ mutate(date = make_date(year, month, day))
+class(rainfall_na_year_date$date)
+glimpse(rainfall_na_year_date)
+rainfall_na_year_date <- rainfall_na_year_date %>%
+  select(station_code, city_name, rainfall, period, quality, lat, long, station_name, year_dup, date)
+glimpse(rainfall_na_year_date)
+class(rainfall_na_year_date$city_name)
+rainfall_na_year_date <- mutate( rainfall_na_year_date, city_name = toupper(city_name))
+glimpse(temperature)
+comb_df <- inner_join(rainfall_na_year_date,temperature, by = c('city_name', 'date'))
+glimpse(comb_df)
 ```
 
 ### Part 3: Data visualization 
 3A. Plotting temperature data over time 
 
 ```{r}
-
+library("ggplot2")
+comb_df_plot <- filter(comb_df, year_dup >=2014)
+comb_df_plot %>%
+    ggplot(aes(
+        x = date,
+        y = temperature,
+        fill = temp_type)) + geom_line(aes(color=temp_type)) + facet_grid(city_name ~.) + labs(title = "Temperature changes in cities from Austrailia",subtitle = "Steady temperature changes in cities in Australia from 2014 - 2019.", x= "Date", y="Temperature", caption = "Wendy Espinoza") + theme(axis.title.y = element_text(size = 12, face = "bold"),axis.title.x = element_text(size = 12, face = "bold"), legend.title = element_text(size = 12, face = "bold"), 
+        legend.text = element_text(size = 12, face = "bold", colour = "black"), 
+        axis.text.y = element_text(colour = "black", size = 10),axis.text.x = element_text(colour = "black", size = 12), strip.text.y = element_text(size = 7)) 
+    
 ```
 
 3B. Plotting rainfall over time
 
 ```{r}
-
+ # comb_df %>%
+ #     filter(city_name == "PERTH", year == 2000) %>%
+ #     ggplot(aes(log(rainfall))) +
+ #     geom_histogram()
+comb_df_hist <- function(chosen_city = comb_df$city_name, chosen_year = comb_df$year_dup){
+  if(!is.null(comb_df$city_name) && !is.null(comb_df$year_dup)){
+  comb_df %>%
+    filter(year_dup == chosen_year, city_name == chosen_city) %>%
+  ggplot(aes(log(rainfall))) +
+    geom_histogram() + labs(title = "Rainfall in Australia", subtitle = "How much did it rain?", x= "Rainfall(log)", y="Frequency", caption = "Wendy Espinoza") + theme(axis.title.y = element_text(size = 12, face = "bold"), axis.title.x = element_text(size = 12, face = "bold"), axis.text.y = element_text(colour = "black", size = 10),axis.text.x = element_text(colour = "black", size = 12), strip.text.y = element_text(size = 7))} else {
+    stop("No measurement found in the year and city name selected", call. = FALSE)
+}}
+comb_df_hist("PERTH",  "2014")
+comb_df_hist("PERTH", "2022")
 ```
-
+For this function, first, I decided to use an if function as a condition that most be meet in order to make the graph. If there are existing values under columns city_name and year_dup, then graph the following histogram using the data from the rainfall column, but use the log transform of the value. If the value selected does not exited in any of these columns, then stop the function and give the following message: " No measurement found in the year and city name selected."
 ### Part 4: Apply functions and plot
 4A: Tasks
 ```{r}
-
+comb_df_4 <- filter(comb_df, year_dup >= 2014)
+rain_df <- comb_df_4 %>%
+  group_by(city_name, year_dup) %>%
+  summarise(
+    Mean = sample_mean(rainfall), SD = sample_sd(rainfall), lower_bound = calculate_CI(rainfall,0.95) [1], upper_bound = calculate_CI(rainfall, 0.95) [2]
+  )
+glimpse(rain_df)
 ```
 
 4B: Tasks
 ```{r}
-
+rain_df %>%
+  ggplot(aes(
+        x = year_dup,
+        y = Mean)) + 
+  geom_point() +geom_line(colour = "blue") + 
+  facet_grid(city_name ~.) + 
+  geom_errorbar(aes(ymin= lower_bound, ymax = upper_bound), width= 0.2) +
+  labs(title = "Rainfall in cities from Autralia",subtitle = "Average rainfall in cities from Australia from 2014 until 2019", x= "Year", y="Average rainfall (mm)", caption = "Wendy Espinoza") + theme(axis.title.y = element_text(size = 12, face = "bold"),axis.title.x = element_text(size = 12, face = "bold"), legend.title = element_text(size = 12, face = "bold"), 
+        legend.text = element_text(size = 12, face = "bold", colour = "black"), 
+        axis.text.y = element_text(colour = "black", size = 10),axis.text.x = element_text(colour = "black", size = 12), strip.text.y = element_text(size = 7)) 
 ```
 
 ```{r}
